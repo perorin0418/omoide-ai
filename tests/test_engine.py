@@ -65,6 +65,32 @@ class MemoryEngineTests(unittest.TestCase):
             Path(record.path).relative_to(self.project_root / "knowledge"),
             Path("decisions") / "implementation-runtime.md",
         )
+        journal_path = self.project_root / "journal" / f"{Path(finalized['journal_path']).stem}.md"
+        self.assertEqual(Path(finalized["journal_path"]), journal_path)
+        journal_body = journal_path.read_text(encoding="utf-8")
+        self.assertIn("#", journal_body)
+        self.assertIn("### User", journal_body)
+        self.assertIn("このプロジェクトは Python で実装したい", journal_body)
+        self.assertIn("了解です。Python 前提で進めます。", journal_body)
+
+    def test_finalize_turn_appends_tool_results_to_daily_journal(self) -> None:
+        prepared = self.engine.memory_prepare_turn(
+            user_message="この変更を適用して",
+            session_id="session-tools",
+            project_path=str(self.project_root),
+        )
+        finalized = self.engine.memory_finalize_turn(
+            turn_token=prepared.turn_token,
+            assistant_message="適用しました。",
+            tool_results={"files": ["src/app.py"], "status": "ok"},
+        )
+
+        journal_path = Path(finalized["journal_path"])
+        self.assertTrue(journal_path.exists())
+        journal_body = journal_path.read_text(encoding="utf-8")
+        self.assertIn("### Tool results", journal_body)
+        self.assertIn("\"src/app.py\"", journal_body)
+        self.assertIn("\"status\": \"ok\"", journal_body)
 
     def test_later_turn_can_retrieve_previous_memory(self) -> None:
         prepared = self.engine.memory_prepare_turn(

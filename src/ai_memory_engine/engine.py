@@ -12,6 +12,7 @@ from .embeddings import HashingEmbeddingProvider
 from .entity_extraction import InMemoryGraphStore, KuzuGraphStore, SimpleEntityExtractor
 from .events import MemoryEvent
 from .extractors import RuleBasedMemoryExtractor
+from .journal_store import DailyJournalStore
 from .markdown_store import MarkdownMemoryStore
 from .models import MemoryCandidate, MemoryKind, MemoryRecord, MemorySource, PreparedTurn, SearchResult
 from .retrieval import HybridRetriever
@@ -25,6 +26,7 @@ class MemoryEngine:
         self.config = config
         self.paths = config.paths
         self.store = MarkdownMemoryStore(self.paths.knowledge_root)
+        self.journal = DailyJournalStore(self.paths.journal_root)
         self.paths.pending_turns_root.mkdir(parents=True, exist_ok=True)
         self.embedder = HashingEmbeddingProvider(config.embedding_dimensions)
         self.entity_extractor = SimpleEntityExtractor()
@@ -216,12 +218,26 @@ class MemoryEngine:
         final_status: str = "completed",
     ) -> dict[str, object]:
         pending = self._load_pending_turn(turn_token)
+        resolved_tool_results = tool_results or {}
         self.analytics.save_turn(
             turn_token=turn_token,
             session_id=pending["session_id"],
             user_message=pending["user_message"],
             assistant_message=assistant_message,
-            tool_results=tool_results or {},
+            tool_results=resolved_tool_results,
+            final_status=final_status,
+            project_path=pending.get("project_path", ""),
+            repo=pending.get("repo", ""),
+            branch=pending.get("branch", ""),
+            cwd=pending.get("cwd", ""),
+        )
+        journal_path = self.journal.append_turn(
+            created_at=pending.get("created_at", now_iso()),
+            turn_token=turn_token,
+            session_id=pending["session_id"],
+            user_message=pending["user_message"],
+            assistant_message=assistant_message,
+            tool_results=resolved_tool_results,
             final_status=final_status,
             project_path=pending.get("project_path", ""),
             repo=pending.get("repo", ""),
@@ -279,6 +295,7 @@ class MemoryEngine:
             "candidate_count": len(candidates),
             "memory_changes": actions,
             "conflicts": conflicts,
+            "journal_path": str(journal_path),
             "sync": sync_result,
         }
 

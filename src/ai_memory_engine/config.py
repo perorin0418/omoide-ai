@@ -10,6 +10,7 @@ from shlex import split as shlex_split
 class EnginePaths:
     project_root: Path
     knowledge_root: Path
+    journal_root: Path
     state_root: Path
     duckdb_path: Path
     vector_root: Path
@@ -23,6 +24,7 @@ class EnginePaths:
         return cls(
             project_root=project_root,
             knowledge_root=project_root / "knowledge",
+            journal_root=project_root / "journal",
             state_root=state_root,
             duckdb_path=state_root / "analytics.duckdb",
             vector_root=state_root / "vector",
