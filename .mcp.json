@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ai-memory-engine": {
+      "type": "local",
+      "command": ".venv\\Scripts\\ai-memory-engine-mcp.exe",
+      "timeout": 60000
+    }
+  }
+}
