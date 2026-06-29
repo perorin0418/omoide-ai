@@ -39,7 +39,7 @@ python -m pip install -e .
 
 ## Project layout
 
-Markdown under `knowledge/` is the source of truth. Derived state is written under `.ai-memory-engine/`.
+Markdown under `knowledge/` is the source of truth. Derived state is written under `.ai-memory-engine/`. Daily interaction journals are appended under `journal/`.
 
 You do not need to pre-create fixed folders. The engine places memories into generic folders based on their role, for example:
 
@@ -52,6 +52,8 @@ knowledge/
   work-context/open-questions/
   user-profile/preferences/
   user-profile/products/
+journal/
+  2026-06-30.md
 ```
 
 Rules are generic rather than technical:
@@ -74,6 +76,8 @@ ai-memory-engine search "What runtime did we choose?"
 ai-memory-engine prepare-turn --session-id demo --message "このプロジェクトは Python で実装したい"
 ai-memory-engine finalize-turn --turn-token <token> --assistant-message "了解。Python で進めます。"
 ```
+
+Each `finalize-turn` call still promotes reusable memory into `knowledge/`, and now also appends the full exchange to that day's Markdown journal in `journal/YYYY-MM-DD.md`.
 
 ## MCP setup
 

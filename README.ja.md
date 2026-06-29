@@ -56,6 +56,7 @@ python -m pip install -e .
 ## ディレクトリ構成
 
 - `knowledge/` 配下の Markdown が正本です
+- AI とのやり取りの日誌は `journal/` 配下に日付ごとで追記されます
 - 派生データは `.ai-memory-engine/` 配下に保存されます
 - **事前にフォルダーを用意する必要はありません**
 
@@ -70,6 +71,8 @@ knowledge/
   work-context/open-questions/
   user-profile/preferences/
   user-profile/products/
+journal/
+  2026-06-30.md
 ```
 
 主なルール:
@@ -189,7 +192,8 @@ ai-memory-engine finalize-turn ^
 1. 会話ターンを DuckDB に保存
 2. 記憶候補を抽出
 3. Markdown に反映
-4. 差分だけ同期
+4. `journal/YYYY-MM-DD.md` にその日の会話日誌を追記
+5. 差分だけ同期
 
 が実行されます。
 

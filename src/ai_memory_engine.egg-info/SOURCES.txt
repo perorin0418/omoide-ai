@@ -13,6 +13,7 @@ src/ai_memory_engine/entity_extraction.py
 src/ai_memory_engine/events.py
 src/ai_memory_engine/extractors.py
 src/ai_memory_engine/frontmatter.py
+src/ai_memory_engine/journal_store.py
 src/ai_memory_engine/markdown_store.py
 src/ai_memory_engine/mcp_server.py
 src/ai_memory_engine/models.py
