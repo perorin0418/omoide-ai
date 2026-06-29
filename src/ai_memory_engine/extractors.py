@@ -28,9 +28,35 @@ class RuleBasedMemoryExtractor:
             ):
                 candidate = extractor(sentence, lower)
                 if candidate:
+                    if candidate.kind == MemoryKind.DECISION and candidate.subject == "decision":
+                        self._attach_decision_context(candidate, user_message)
                     candidates.append(candidate)
                     break
         return self._dedupe(candidates)
+
+    def _attach_decision_context(self, candidate: MemoryCandidate, user_message: str) -> None:
+        context = self._infer_decision_context(user_message)
+        if not context:
+            return
+        candidate.subject = context
+        detail = f"Decision for: {context}"
+        if detail not in candidate.details:
+            candidate.details.insert(0, detail)
+        if "decision-context" not in candidate.tags:
+            candidate.tags.append("decision-context")
+
+    def _infer_decision_context(self, user_message: str) -> str:
+        for sentence in split_sentences(user_message):
+            context = self._normalize_decision_context(sentence)
+            if context:
+                return context
+        return self._normalize_decision_context(user_message)
+
+    def _normalize_decision_context(self, text: str) -> str:
+        cleaned = text.strip().strip("「」\"'").strip()
+        cleaned = re.sub(r"^[>\-\*\d\.\)\s]+", "", cleaned).strip()
+        cleaned = re.sub(r"[。！？!?]+$", "", cleaned).strip()
+        return cleaned
 
     def _extract_user_product_fact(self, user_message: str, assistant_message: str) -> MemoryCandidate | None:
         combined = f"{user_message}\n{assistant_message}"
