@@ -85,6 +85,26 @@ class MemoryEngineTests(unittest.TestCase):
         memory_ids = [item.memory.memory_id for item in later.retrieved_memories]
         self.assertIn("implementation-runtime", memory_ids)
 
+    def test_generic_decision_captures_issue_context(self) -> None:
+        user_message = "メガネの耳にかける部分のゴムが黄ばんでベタベタするんだけど、どうやったらきれいになる？"
+        prepared = self.engine.memory_prepare_turn(
+            user_message=user_message,
+            session_id="session-1",
+            project_path=str(self.project_root),
+        )
+        finalized = self.engine.memory_finalize_turn(
+            turn_token=prepared.turn_token,
+            assistant_message="交換を優先する方針にする。",
+        )
+
+        self.assertEqual(finalized["candidate_count"], 1)
+        record = self.engine.store.get_record("decision-交換を優先する方針にする")
+        self.assertIsNotNone(record)
+        self.assertEqual(record.subject, user_message.rstrip("？"))
+        self.assertIn(f"Decision for: {user_message.rstrip('？')}", record.details)
+        body = Path(record.path).read_text(encoding="utf-8")
+        self.assertIn(f"Decision for: {user_message.rstrip('？')}", body)
+
     def test_conflict_is_visible_without_overwriting_existing_memory(self) -> None:
         first = self.engine.memory_prepare_turn(
             user_message="このプロジェクトは Python で実装したい",
