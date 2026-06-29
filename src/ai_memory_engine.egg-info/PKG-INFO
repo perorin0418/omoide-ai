@@ -1,0 +1,151 @@
+Metadata-Version: 2.4
+Name: ai-memory-engine
+Version: 0.1.0
+Summary: Local-first AI memory engine for Copilot CLI and Claude Code.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: duckdb>=1.0.0
+Requires-Dist: kuzu>=0.7.1
+Requires-Dist: lancedb>=0.8.2
+Requires-Dist: PyYAML>=6.0
+
+# AI Memory Engine
+
+Local-first memory engine for `GitHub Copilot CLI` and `Claude Code`.
+
+- [日本語版 README](README.ja.md)
+
+## What it does
+
+- stores reusable memory from conversations
+- keeps Markdown as the source of truth
+- builds derived indexes for retrieval
+- exposes a shared local MCP server for both agents
+
+## Architecture
+
+```text
+Claude Code / Copilot CLI
+        ↓
+Local MCP stdio server
+        ↓
+AI Memory Engine (Python)
+   ├─ Conversation ingest
+   ├─ Memory extraction
+   ├─ Markdown memory store
+   ├─ Incremental sync pipeline
+   ├─ Retrieval / ranking
+   └─ Event emission
+        ↓
+   ├─ LanceDB
+   ├─ Kuzu
+   └─ DuckDB
+```
+
+## Install
+
+```bash
+python -m pip install -e .
+```
+
+## Project layout
+
+Markdown under `knowledge/` is the source of truth. Derived state is written under `.ai-memory-engine/`.
+
+You do not need to pre-create fixed folders. The engine places memories into generic folders based on their role, for example:
+
+```text
+knowledge/
+  decisions/
+  constraints/
+  reference/
+  work-context/tasks/
+  work-context/open-questions/
+  user-profile/preferences/
+  user-profile/products/
+```
+
+Rules are generic rather than technical:
+
+1. `decision` memories go to `knowledge/decisions/`
+2. `constraint` memories go to `knowledge/constraints/`
+3. `fact` memories go to `knowledge/reference/`
+4. `task-context` memories go to `knowledge/work-context/tasks/`
+5. `open-question` memories go to `knowledge/work-context/open-questions/`
+6. `user-profile` tags or `user_` subjects go to `knowledge/user-profile/...`
+
+If you want to hint a custom nested folder, pass a slash-delimited `category` such as `vendors/schick`.
+
+## CLI examples
+
+```bash
+ai-memory-engine sync
+ai-memory-engine rebuild
+ai-memory-engine search "What runtime did we choose?"
+ai-memory-engine prepare-turn --session-id demo --message "このプロジェクトは Python で実装したい"
+ai-memory-engine finalize-turn --turn-token <token> --assistant-message "了解。Python で進めます。"
+```
+
+## MCP setup
+
+### Claude Code
+
+This repository includes `.mcp.json`. After installing the package, Claude Code can load the local stdio server from that file.
+
+### GitHub Copilot CLI
+
+This repository includes `.github/mcp.json` for the same MCP server.
+
+Repository-scoped instructions are included in:
+
+- `CLAUDE.md`
+- `.github/copilot-instructions.md`
+
+## Optional AI-assisted extraction
+
+The engine includes an optional refinement step for memory extraction. It stays offline-first by default and does nothing unless you configure a local command.
+
+Set `AI_MEMORY_ENGINE_ASSIST_COMMAND` to a local command that:
+
+1. reads JSON from stdin
+2. returns JSON on stdout
+3. outputs a `candidates` array with refined memory candidates
+
+Example shape:
+
+```json
+{
+  "candidates": [
+    {
+      "memory_id": "implementation-runtime",
+      "title": "Implementation Runtime",
+      "kind": "decision",
+      "summary": "The implementation runtime is python.",
+      "subject": "implementation_runtime",
+      "value": "python",
+      "category": "project/implementation",
+      "tags": ["python", "runtime"],
+      "details": ["Refined by local model"],
+      "confidence": 0.98,
+      "importance_score": 0.99
+    }
+  ]
+}
+```
+
+Use `AI_MEMORY_ENGINE_ASSIST_TIMEOUT_SECONDS` to control the subprocess timeout.
+
+## Notes
+
+- `DuckDB`, `LanceDB`, and `Kuzu` are required runtime dependencies.
+- Markdown remains the source of truth even though vector and graph stores are always persisted.
+
+## Resetting memory state
+
+Use the following command to clear saved Markdown memories and derived local state before a fresh verification run:
+
+```bash
+ai-memory-engine reset --yes
+```
+
+This resets `knowledge/` memories, DuckDB analytics, the index manifest, pending turns, and derived vector/graph state.
