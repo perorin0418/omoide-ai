@@ -2,3 +2,4 @@
 __pycache__/
 *.pyc
 .ai-memory-engine/
+knowledge/
