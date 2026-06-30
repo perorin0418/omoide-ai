@@ -37,6 +37,45 @@ AI Memory Engine (Python)
 python -m pip install -e .
 ```
 
+## Publish and install from PyPI
+
+Once the package is published to PyPI, users can install or run it without cloning this repository.
+
+### Install the CLI from PyPI
+
+```bash
+python -m pip install omoide-ai
+```
+
+### Run the MCP server with uvx
+
+```bash
+uvx --from omoide-ai omoide-ai-mcp
+```
+
+### MCP config for a published package
+
+For clients that launch a local stdio MCP server, point them at `uvx` instead of a repository-local virtualenv:
+
+```json
+{
+  "mcpServers": {
+    "omoide-ai": {
+      "type": "local",
+      "command": "uvx",
+      "args": ["--from", "omoide-ai", "omoide-ai-mcp"],
+      "timeout": 60000
+    }
+  }
+}
+```
+
+### Maintainer release flow
+
+1. Create a GitHub release or run the `Publish PyPI` workflow manually.
+2. Add a repository secret named `PYPI_API_TOKEN`.
+3. The workflow builds the package with `uv build` and uploads it to PyPI.
+
 ## Project layout
 
 Markdown under `knowledge/` is the source of truth. Derived state is written under `.ai-memory-engine/`. Daily interaction journals are appended under `journal/`.
@@ -70,11 +109,11 @@ If you want to hint a custom nested folder, pass a slash-delimited `category` su
 ## CLI examples
 
 ```bash
-ai-memory-engine sync
-ai-memory-engine rebuild
-ai-memory-engine search "What runtime did we choose?"
-ai-memory-engine prepare-turn --session-id demo --message "このプロジェクトは Python で実装したい"
-ai-memory-engine finalize-turn --turn-token <token> --assistant-message "了解。Python で進めます。"
+omoide-ai sync
+omoide-ai rebuild
+omoide-ai search "What runtime did we choose?"
+omoide-ai prepare-turn --session-id demo --message "このプロジェクトは Python で実装したい"
+omoide-ai finalize-turn --turn-token <token> --assistant-message "了解。Python で進めます。"
 ```
 
 Each `finalize-turn` call still promotes reusable memory into `knowledge/`, and now also appends the full exchange to that day's Markdown journal in `journal/YYYY-MM-DD.md`.
@@ -83,11 +122,11 @@ Each `finalize-turn` call still promotes reusable memory into `knowledge/`, and 
 
 ### Claude Code
 
-This repository includes `.mcp.json`. After installing the package, Claude Code can load the local stdio server from that file.
+This repository includes `.mcp.json` for repository-local development. After publishing to PyPI, you can switch the command to the `uvx` example above.
 
 ### GitHub Copilot CLI
 
-This repository includes `.github/mcp.json` for the same MCP server.
+This repository includes `.github/mcp.json` for repository-local development. After publishing to PyPI, you can switch the command to the `uvx` example above.
 
 Repository-scoped instructions are included in:
 
@@ -138,7 +177,7 @@ Use `AI_MEMORY_ENGINE_ASSIST_TIMEOUT_SECONDS` to control the subprocess timeout.
 Use the following command to clear saved Markdown memories and derived local state before a fresh verification run:
 
 ```bash
-ai-memory-engine reset --yes
+omoide-ai reset --yes
 ```
 
 This resets `knowledge/` memories, DuckDB analytics, the index manifest, pending turns, and derived vector/graph state.

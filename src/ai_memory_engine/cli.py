@@ -14,7 +14,7 @@ def build_engine(project_root: str | None) -> MemoryEngine:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="ai-memory-engine")
+    parser = argparse.ArgumentParser(prog="omoide-ai")
     parser.add_argument("--project-root", default=".")
     subparsers = parser.add_subparsers(dest="command", required=True)
 

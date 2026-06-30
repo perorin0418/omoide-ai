@@ -1,6 +1,6 @@
 # Claude Code Project Instructions
 
-This repository uses the local `ai-memory-engine` MCP server for long-term memory.
+This repository uses the local `omoide-ai` MCP server for long-term memory.
 
 ## Required turn contract
 

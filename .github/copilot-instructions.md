@@ -1,6 +1,6 @@
 # Copilot Instructions for AI Memory Engine
 
-This repository uses the local `ai-memory-engine` MCP server for reusable memory across conversations.
+This repository uses the local `omoide-ai` MCP server for reusable memory across conversations.
 
 ## Required workflow
 
