@@ -27,7 +27,7 @@ AI Memory Engine (Python)
    └─ Event emission
         ↓
    ├─ LanceDB
-   ├─ Kuzu
+   ├─ LadybugDB
    └─ DuckDB
 ```
 
@@ -194,7 +194,8 @@ Use `AI_MEMORY_ENGINE_ASSIST_TIMEOUT_SECONDS` to control the subprocess timeout.
 
 ## Notes
 
-- `DuckDB`, `LanceDB`, and `Kuzu` are required runtime dependencies.
+- `DuckDB`, `LanceDB`, and `LadybugDB` are required runtime dependencies.
+- The graph index is stored under `.ai-memory-engine/graph/` using LadybugDB (`memory.lbug`).
 - Markdown remains the source of truth even though vector and graph stores are always persisted.
 
 ## Resetting memory state

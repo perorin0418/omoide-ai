@@ -9,7 +9,7 @@ from .ai_assist import OptionalAIAssistant
 from .analytics import DuckDBAnalyticsStore
 from .config import EngineConfig
 from .embeddings import HashingEmbeddingProvider
-from .entity_extraction import InMemoryGraphStore, KuzuGraphStore, SimpleEntityExtractor
+from .entity_extraction import InMemoryGraphStore, LadybugGraphStore, SimpleEntityExtractor
 from .events import MemoryEvent
 from .extractors import RuleBasedMemoryExtractor
 from .journal_store import DailyJournalStore
@@ -499,14 +499,14 @@ class MemoryEngine:
             analytics=self.analytics,
         )
         if synchronize:
-            self.synchronizer.synchronize()
+            self.synchronizer.synchronize(force_graph=self.graph_store.needs_bootstrap())
 
     def _build_vector_store(self) -> InMemoryVectorStore | LanceDBVectorStore:
         if self.config.vector_backend != "lancedb":
             raise ValueError(f"Unsupported vector backend: {self.config.vector_backend}")
         return LanceDBVectorStore(self.paths.vector_root)
 
-    def _build_graph_store(self) -> InMemoryGraphStore | KuzuGraphStore:
-        if self.config.graph_backend != "kuzu":
+    def _build_graph_store(self) -> InMemoryGraphStore | LadybugGraphStore:
+        if self.config.graph_backend not in {"ladybug", "kuzu"}:
             raise ValueError(f"Unsupported graph backend: {self.config.graph_backend}")
-        return KuzuGraphStore(self.paths.graph_root)
+        return LadybugGraphStore(self.paths.graph_root)

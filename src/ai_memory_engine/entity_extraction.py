@@ -13,6 +13,7 @@ KEYWORDS = {
     "markdown",
     "mcp",
     "lancedb",
+    "ladybug",
     "kuzu",
     "duckdb",
     "copilot",
@@ -63,16 +64,20 @@ class InMemoryGraphStore:
         hits.sort(key=lambda item: item.score, reverse=True)
         return hits[:top_k]
 
+    def needs_bootstrap(self) -> bool:
+        return False
 
-class KuzuGraphStore:
+
+class LadybugGraphStore:
     def __init__(self, root: Path) -> None:
         try:
-            import kuzu
+            import ladybug
         except ImportError as exc:
-            raise RuntimeError("kuzu is required for the Kuzu adapter") from exc
+            raise RuntimeError("ladybug is required for the LadybugDB adapter") from exc
         root.mkdir(parents=True, exist_ok=True)
-        self._kuzu = kuzu
-        self._database_path = root / "memory.kuzu"
+        self._ladybug = ladybug
+        self._database_path = root / "memory.lbug"
+        self._needs_bootstrap = not self._database_path.exists()
         with self._connect() as conn:
             conn.execute("CREATE NODE TABLE IF NOT EXISTS Memory(id STRING, path STRING, PRIMARY KEY(id));")
             conn.execute("CREATE NODE TABLE IF NOT EXISTS Entity(name STRING, PRIMARY KEY(name));")
@@ -90,6 +95,7 @@ class KuzuGraphStore:
                 conn.execute(
                     f"MATCH (m:Memory {{id: '{escaped_memory_id}'}}), (e:Entity {{name: '{escaped}'}}) MERGE (m)-[:MENTIONS]->(e);"
                 )
+        self._needs_bootstrap = False
 
     def delete_document(self, path: str) -> None:
         escaped = self._escape(path)
@@ -114,6 +120,9 @@ class KuzuGraphStore:
         ordered = sorted(hits.values(), key=lambda item: item.score, reverse=True)
         return ordered[:top_k]
 
+    def needs_bootstrap(self) -> bool:
+        return self._needs_bootstrap
+
     def close(self) -> None:
         return None
 
@@ -122,8 +131,8 @@ class KuzuGraphStore:
 
     @contextmanager
     def _connect(self):
-        db = self._kuzu.Database(str(self._database_path))
-        conn = self._kuzu.Connection(db)
+        db = self._ladybug.Database(str(self._database_path))
+        conn = self._ladybug.Connection(db)
         try:
             yield conn
         finally:

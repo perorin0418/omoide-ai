@@ -32,5 +32,5 @@ For every user turn in this repository:
 ## Memory policy
 
 - Markdown under `knowledge/` is the source of truth.
-- Do not store durable knowledge only in DuckDB, LanceDB, or Kuzu.
+- Do not store durable knowledge only in DuckDB, LanceDB, or LadybugDB.
 - If a turn produces a durable decision, preference, constraint, fact, task-context item, or open question, ensure it is finalized through the memory engine.

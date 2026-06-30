@@ -42,7 +42,7 @@ class EnginePaths:
 class EngineConfig:
     paths: EnginePaths
     vector_backend: str = "lancedb"
-    graph_backend: str = "kuzu"
+    graph_backend: str = "ladybug"
     embedding_dimensions: int = 256
     default_top_k: int = 5
     ai_assist_command: tuple[str, ...] = ()

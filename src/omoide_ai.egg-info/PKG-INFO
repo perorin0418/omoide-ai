@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: omoide-ai
-Version: 0.1.2
+Version: 0.1.3
 Summary: Local-first AI memory engine for Copilot CLI and Claude Code.
 Author: perorin0418
 Project-URL: Homepage, https://github.com/perorin0418/omoide-ai
@@ -19,7 +19,7 @@ Classifier: Topic :: Utilities
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 Requires-Dist: duckdb>=1.0.0
-Requires-Dist: kuzu>=0.7.1
+Requires-Dist: ladybug>=0.0.1
 Requires-Dist: lancedb>=0.8.2
 Requires-Dist: PyYAML>=6.0
 
@@ -52,7 +52,7 @@ AI Memory Engine (Python)
    └─ Event emission
         ↓
    ├─ LanceDB
-   ├─ Kuzu
+   ├─ LadybugDB
    └─ DuckDB
 ```
 
@@ -219,7 +219,8 @@ Use `AI_MEMORY_ENGINE_ASSIST_TIMEOUT_SECONDS` to control the subprocess timeout.
 
 ## Notes
 
-- `DuckDB`, `LanceDB`, and `Kuzu` are required runtime dependencies.
+- `DuckDB`, `LanceDB`, and `LadybugDB` are required runtime dependencies.
+- The graph index is stored under `.ai-memory-engine/graph/` using LadybugDB (`memory.lbug`).
 - Markdown remains the source of truth even though vector and graph stores are always persisted.
 
 ## Resetting memory state
