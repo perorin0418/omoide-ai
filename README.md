@@ -118,6 +118,14 @@ omoide-ai finalize-turn --turn-token <token> --assistant-message "了解。Pytho
 
 Each `finalize-turn` call still promotes reusable memory into `knowledge/`, and now also appends the full exchange to that day's Markdown journal in `journal/YYYY-MM-DD.md`.
 
+For MCP usage, the effective project root now resolves in this order:
+
+1. `AI_MEMORY_ENGINE_PROJECT_ROOT`
+2. `CLAUDE_PROJECT_DIR`
+3. a project root discovered from the request's `project_path` or `cwd`
+4. the request's `cwd`
+5. the MCP server process context as a final fallback
+
 ## MCP setup
 
 ### Claude Code

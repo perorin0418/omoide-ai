@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-from functools import cached_property
 from io import BufferedReader
 from pathlib import Path
 from typing import Any
@@ -37,18 +36,28 @@ def log_event(event: str, **fields: Any) -> None:
 
 class MemoryMCPServer:
     def __init__(self, project_root: Path | MemoryEngine) -> None:
+        self._engines_by_root: dict[Path, MemoryEngine] = {}
+        self._turn_roots: dict[str, Path] = {}
         if isinstance(project_root, MemoryEngine):
             self._engine_override = project_root
             self.project_root = project_root.paths.project_root
         else:
             self._engine_override = None
-            self.project_root = project_root
+            self.project_root = Path(project_root).resolve()
 
-    @cached_property
+    @property
     def engine(self) -> MemoryEngine:
+        return self._engine_for_root(self.project_root)
+
+    def _engine_for_root(self, project_root: Path) -> MemoryEngine:
         if self._engine_override is not None:
             return self._engine_override
-        return MemoryEngine(EngineConfig.for_project(self.project_root))
+        resolved_root = project_root.resolve()
+        engine = self._engines_by_root.get(resolved_root)
+        if engine is None:
+            engine = MemoryEngine(EngineConfig.for_project(resolved_root))
+            self._engines_by_root[resolved_root] = engine
+        return engine
 
     def handle_message(self, message: dict[str, object]) -> dict[str, object] | None:
         method = message.get("method")
@@ -146,6 +155,8 @@ class MemoryMCPServer:
                         "assistant_message": {"type": "string"},
                         "tool_results": {},
                         "final_status": {"type": "string"},
+                        "project_path": {"type": "string"},
+                        "cwd": {"type": "string"},
                     },
                 },
             },
@@ -166,6 +177,8 @@ class MemoryMCPServer:
                         "subject": {"type": "string"},
                         "value": {"type": "string"},
                         "importance_score": {"type": "number"},
+                        "project_path": {"type": "string"},
+                        "cwd": {"type": "string"},
                     },
                 },
             },
@@ -196,15 +209,18 @@ class MemoryMCPServer:
 
     def _call_tool(self, name: str, arguments: dict[str, object]) -> dict[str, object]:
         if name == "memory_prepare_turn":
-            prepared = self.engine.memory_prepare_turn(
+            project_root = self._resolve_project_root_for_arguments(arguments)
+            engine = self._engine_for_root(project_root)
+            prepared = engine.memory_prepare_turn(
                 user_message=str(arguments["user_message"]),
                 session_id=str(arguments["session_id"]),
                 project_path=str(arguments.get("project_path", "")),
                 repo=str(arguments.get("repo", "")),
                 branch=str(arguments.get("branch", "")),
                 cwd=str(arguments.get("cwd", "")),
-                top_k=int(arguments.get("top_k", self.engine.config.default_top_k)),
+                top_k=int(arguments.get("top_k", engine.config.default_top_k)),
             )
+            self._turn_roots[prepared.turn_token] = project_root
             return {
                 "turn_token": prepared.turn_token,
                 "retrieved_memories": [
@@ -219,19 +235,24 @@ class MemoryMCPServer:
                     for item in prepared.retrieved_memories
                 ],
                 "project_path": prepared.project_path,
+                "resolved_project_root": str(project_root),
                 "related_entities": prepared.related_entities,
                 "open_questions": prepared.open_questions,
                 "context_block": prepared.context_block,
             }
         if name == "memory_finalize_turn":
-            return self.engine.memory_finalize_turn(
+            turn_token = str(arguments["turn_token"])
+            project_root = self._resolve_project_root_for_turn(turn_token, arguments)
+            result = self._engine_for_root(project_root).memory_finalize_turn(
                 turn_token=str(arguments["turn_token"]),
                 assistant_message=str(arguments["assistant_message"]),
                 tool_results=arguments.get("tool_results", {}),
                 final_status=str(arguments.get("final_status", "completed")),
             )
+            self._turn_roots.pop(turn_token, None)
+            return result
         if name == "memory_upsert_note":
-            return self.engine.add_knowledge(
+            return self._engine_for_root(self._resolve_project_root_for_arguments(arguments)).add_knowledge(
                 title=str(arguments["title"]),
                 summary=str(arguments["summary"]),
                 kind=str(arguments.get("kind", "fact")),
@@ -244,9 +265,10 @@ class MemoryMCPServer:
                 importance_score=float(arguments.get("importance_score", 0.5)),
             )
         if name == "memory_search":
-            results = self.engine.search(
+            engine = self._engine_for_root(self._resolve_project_root_for_arguments(arguments))
+            results = engine.search(
                 str(arguments["query"]),
-                top_k=int(arguments.get("top_k", self.engine.config.default_top_k)),
+                top_k=int(arguments.get("top_k", engine.config.default_top_k)),
                 session_id=str(arguments.get("session_id", "")),
             )
             return {
@@ -262,10 +284,30 @@ class MemoryMCPServer:
                 ]
             }
         if name == "memory_sync":
-            return self.engine.synchronize()
+            return self._engine_for_root(self._resolve_project_root_for_arguments(arguments)).synchronize()
         if name == "memory_rebuild":
-            return self.engine.rebuild_index()
+            return self._engine_for_root(self._resolve_project_root_for_arguments(arguments)).rebuild_index()
         raise KeyError(f"Unknown tool: {name}")
+
+    def _resolve_project_root_for_arguments(self, arguments: dict[str, object]) -> Path:
+        if self._engine_override is not None:
+            return self.project_root
+        return resolve_project_root(
+            project_path=str(arguments.get("project_path", "")),
+            cwd=str(arguments.get("cwd", "")),
+        )
+
+    def _resolve_project_root_for_turn(self, turn_token: str, arguments: dict[str, object]) -> Path:
+        if self._engine_override is not None:
+            return self.project_root
+        remembered_root = self._turn_roots.get(turn_token)
+        if remembered_root is not None:
+            return remembered_root
+        token_filename = f"{turn_token}.json"
+        for project_root, engine in self._engines_by_root.items():
+            if (engine.paths.pending_turns_root / token_filename).exists():
+                return project_root
+        return self._resolve_project_root_for_arguments(arguments)
 
 
 def _read_framed_message(first_line: bytes, stream: BufferedReader) -> dict[str, object] | None:
@@ -337,18 +379,31 @@ def _find_project_root_from(start: Path) -> Path | None:
     return None
 
 
-def resolve_project_root() -> Path:
+def resolve_project_root(*, project_path: str = "", cwd: str = "") -> Path:
     explicit = os.environ.get("AI_MEMORY_ENGINE_PROJECT_ROOT") or os.environ.get("CLAUDE_PROJECT_DIR")
     if explicit:
         return Path(explicit).resolve()
 
-    search_roots = [
+    runtime_search_roots = [
+        Path(project_path) if project_path else None,
+        Path(cwd) if cwd else None,
+    ]
+    for search_root in runtime_search_roots:
+        if search_root is None:
+            continue
+        project_root = _find_project_root_from(search_root)
+        if project_root is not None:
+            return project_root
+    if cwd:
+        return Path(cwd).resolve()
+
+    process_search_roots = [
         Path(os.getcwd()),
         Path(__file__),
         Path(sys.argv[0]),
         Path(sys.executable),
     ]
-    for search_root in search_roots:
+    for search_root in process_search_roots:
         project_root = _find_project_root_from(search_root)
         if project_root is not None:
             return project_root

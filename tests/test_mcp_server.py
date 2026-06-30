@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from ai_memory_engine.config import EngineConfig
 from ai_memory_engine.engine import MemoryEngine
-from ai_memory_engine.mcp_server import MemoryMCPServer
+from ai_memory_engine.mcp_server import MemoryMCPServer, resolve_project_root
 
 
 class MemoryMCPServerTests(unittest.TestCase):
@@ -57,3 +59,67 @@ class MemoryMCPServerTests(unittest.TestCase):
             payload = json.loads(response["result"]["content"][0]["text"])
             self.assertIn("context_block", payload)
             self.assertIn("Implementation Runtime", payload["context_block"])
+
+    def test_prepare_and_finalize_use_runtime_cwd_for_storage(self) -> None:
+        with tempfile.TemporaryDirectory() as server_root_dir, tempfile.TemporaryDirectory() as runtime_root_dir:
+            server_root = Path(server_root_dir)
+            runtime_root = Path(runtime_root_dir)
+            server = MemoryMCPServer(server_root)
+
+            prepared = server.handle_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "memory_prepare_turn",
+                        "arguments": {
+                            "user_message": "このプロジェクトは Python で実装したい",
+                            "session_id": "session-1",
+                            "project_path": str(runtime_root),
+                            "cwd": str(runtime_root),
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(prepared)
+            prepared_payload = json.loads(prepared["result"]["content"][0]["text"])
+            self.assertEqual(prepared_payload["resolved_project_root"], str(runtime_root))
+
+            finalized = server.handle_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "memory_finalize_turn",
+                        "arguments": {
+                            "turn_token": prepared_payload["turn_token"],
+                            "assistant_message": "了解です。Python 前提で進めます。",
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(finalized)
+            runtime_memory = runtime_root / "knowledge" / "decisions" / "implementation-runtime.md"
+            server_memory = server_root / "knowledge" / "decisions" / "implementation-runtime.md"
+            self.assertTrue(runtime_memory.exists())
+            self.assertFalse(server_memory.exists())
+
+    def test_resolve_project_root_prioritizes_runtime_search_then_runtime_cwd_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir, tempfile.TemporaryDirectory() as fallback_dir:
+            runtime_root = Path(tempdir)
+            nested_cwd = runtime_root / "workspace" / "child"
+            nested_cwd.mkdir(parents=True)
+            (runtime_root / "pyproject.toml").write_text("", encoding="utf-8")
+            (runtime_root / ".mcp.json").write_text("{}", encoding="utf-8")
+            (runtime_root / "src" / "ai_memory_engine").mkdir(parents=True)
+
+            with patch.dict("os.environ", {}, clear=True):
+                resolved = resolve_project_root(project_path="", cwd=str(nested_cwd))
+                self.assertEqual(resolved, runtime_root)
+
+            markerless_cwd = Path(fallback_dir)
+            with patch.dict("os.environ", {}, clear=True):
+                resolved = resolve_project_root(project_path="", cwd=str(markerless_cwd))
+                self.assertEqual(resolved, markerless_cwd.resolve())
