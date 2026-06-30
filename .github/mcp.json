@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "ai-memory-engine": {
+    "omoide-ai": {
       "type": "local",
-      "command": ".venv\\Scripts\\ai-memory-engine-mcp.exe",
+      "command": ".venv\\Scripts\\omoide-ai-mcp.exe",
       "timeout": 60000,
       "tools": [
         "*"

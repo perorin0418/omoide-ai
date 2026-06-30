@@ -1,3 +1,0 @@
-[console_scripts]
-ai-memory-engine = ai_memory_engine.cli:main
-ai-memory-engine-mcp = ai_memory_engine.mcp_server:main

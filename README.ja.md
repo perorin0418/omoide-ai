@@ -53,6 +53,45 @@ AI Memory Engine (Python)
 python -m pip install -e .
 ```
 
+## PyPI 配布後の利用方法
+
+PyPI に公開すると、このリポジトリを clone しなくてもインストールや MCP 起動ができます。
+
+### CLI を PyPI からインストールする
+
+```bash
+python -m pip install omoide-ai
+```
+
+### MCP server を uvx で起動する
+
+```bash
+uvx --from omoide-ai omoide-ai-mcp
+```
+
+### 公開済みパッケージ向け MCP 設定例
+
+ローカルの stdio MCP server を起動するクライアントでは、リポジトリ内の `.venv` ではなく `uvx` を指定します。
+
+```json
+{
+  "mcpServers": {
+    "omoide-ai": {
+      "type": "local",
+      "command": "uvx",
+      "args": ["--from", "omoide-ai", "omoide-ai-mcp"],
+      "timeout": 60000
+    }
+  }
+}
+```
+
+### メンテナー向け公開フロー
+
+1. GitHub Release を作成するか、`Publish PyPI` workflow を手動実行します
+2. リポジトリ secret に `PYPI_API_TOKEN` を登録します
+3. workflow が `uv build` でビルドし、PyPI にアップロードします
+
 ## ディレクトリ構成
 
 - `knowledge/` 配下の Markdown が正本です
@@ -101,7 +140,7 @@ journal/
 ### 1. Markdown を同期する
 
 ```bash
-ai-memory-engine sync
+omoide-ai sync
 ```
 
 `knowledge/` 配下の Markdown を読み取り、必要な差分だけを再インデックスします。
@@ -109,7 +148,7 @@ ai-memory-engine sync
 ### 2. 全インデックスを再構築する
 
 ```bash
-ai-memory-engine rebuild
+omoide-ai rebuild
 ```
 
 Markdown を正本として、派生ストアを再構築します。
@@ -117,7 +156,7 @@ Markdown を正本として、派生ストアを再構築します。
 ### 3. 手動で知識を追加する
 
 ```bash
-ai-memory-engine add-knowledge ^
+omoide-ai add-knowledge ^
   --title "Implementation Runtime" ^
   --summary "The implementation runtime is python." ^
   --kind decision ^
@@ -131,13 +170,13 @@ ai-memory-engine add-knowledge ^
 ### 4. 知識を検索する
 
 ```bash
-ai-memory-engine search "What runtime did we choose?"
+omoide-ai search "What runtime did we choose?"
 ```
 
 ### 5. 記憶を一括リセットする
 
 ```bash
-ai-memory-engine reset --yes
+omoide-ai reset --yes
 ```
 
 このコマンドは、動作確認をやり直したいときのために次をまとめて初期化します。
@@ -159,7 +198,7 @@ ai-memory-engine reset --yes
 ### 1. 応答前
 
 ```bash
-ai-memory-engine prepare-turn ^
+omoide-ai prepare-turn ^
   --session-id demo ^
   --project-path "D:\path\to\repo" ^
   --repo "owner/repo" ^
@@ -181,7 +220,7 @@ AI はこの結果を見て応答を組み立てます。
 ### 2. 応答後
 
 ```bash
-ai-memory-engine finalize-turn ^
+omoide-ai finalize-turn ^
   --turn-token <token> ^
   --assistant-message "了解です。Python 前提で進めます。" ^
   --final-status completed
@@ -210,7 +249,9 @@ ai-memory-engine finalize-turn ^
 
 1. このリポジトリでパッケージをインストールする
 2. Claude Code からこのプロジェクトを開く
-3. `.mcp.json` を使って `ai-memory-engine` MCP server を読み込む
+3. `.mcp.json` を使って `omoide-ai` MCP server を読み込む
+
+PyPI 公開後は、上の `uvx` 設定例に切り替えられます。
 
 ### 期待する動作
 
@@ -233,6 +274,8 @@ ai-memory-engine finalize-turn ^
 1. このリポジトリでパッケージをインストールする
 2. Copilot CLI で MCP 設定を読み込む
 3. リポジトリ instruction に従って turn contract を使う
+
+PyPI 公開後は、上の `uvx` 設定例に切り替えられます。
 
 ---
 

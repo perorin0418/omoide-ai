@@ -64,7 +64,7 @@ class MemoryMCPServer:
                 "result": {
                     "protocolVersion": protocol_version,
                     "capabilities": {"tools": {"listChanged": False}},
-                    "serverInfo": {"name": "ai-memory-engine", "version": "0.1.0"},
+                    "serverInfo": {"name": "omoide-ai", "version": "0.1.0"},
                 },
             }
             log_event("message.responded", method=method)
