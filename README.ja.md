@@ -226,6 +226,20 @@ MCP 経由の保存先ルートは次の優先順位で解決されます。
 4. リクエストで渡した `cwd`
 5. 最後のフォールバックとして MCP サーバープロセス側の実行コンテキスト
 
+固定した記憶だけで回答させたい場合は、`prepare-turn` の前に `AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS` へ `memory_id` をカンマ区切りまたは改行区切りで設定します。
+
+```bash
+AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS=implementation-runtime,markdown-source-of-truth
+```
+
+このモードでは:
+
+1. `prepare-turn` は通常の検索を行わず、指定した記憶をその順番でそのまま返します
+2. `context_block` の見出しが `Locked memory context:` になります
+3. `finalize-turn` は会話ログと journal への保存は続けますが、新しい Markdown 記憶の昇格を止めるので、記憶ベースが固定されたままになります
+
+設定した `memory_id` が 1 つでも存在しなければ、動的検索へ黙ってフォールバックせず、その場でエラーにします。
+
 ### 2. 応答後
 
 ```bash

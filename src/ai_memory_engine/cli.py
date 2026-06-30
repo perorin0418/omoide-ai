@@ -77,6 +77,8 @@ def main() -> None:
             json.dumps(
                 {
                     "turn_token": prepared.turn_token,
+                    "memory_mode": prepared.memory_mode,
+                    "configured_memory_ids": prepared.configured_memory_ids,
                     "retrieved_memories": [_serialize_result(item) for item in prepared.retrieved_memories],
                     "project_path": prepared.project_path,
                     "related_entities": prepared.related_entities,

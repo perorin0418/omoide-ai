@@ -68,8 +68,13 @@ class HybridRetriever:
         self._record_usage(results, session_id, query)
         return results
 
-    def build_context_block(self, results: list[SearchResult], open_questions: list[str]) -> str:
-        return self.context_builder.build(results, open_questions)
+    def build_context_block(
+        self,
+        results: list[SearchResult],
+        open_questions: list[str],
+        memory_mode: str = "dynamic",
+    ) -> str:
+        return self.context_builder.build(results, open_questions, memory_mode=memory_mode)
 
     def _semantic_results(self, query: str, top_k: int) -> list[SearchResult]:
         embedding = self.embedder.embed(query)

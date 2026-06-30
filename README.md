@@ -127,6 +127,22 @@ For MCP usage, the effective project root now resolves in this order:
 4. the request's `cwd`
 5. the MCP server process context as a final fallback
 
+## Locked memory mode
+
+If you want the assistant to answer against a fixed set of memories, set `AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS` to a comma- or newline-delimited list of `memory_id` values before calling `prepare-turn`.
+
+```bash
+AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS=implementation-runtime,markdown-source-of-truth
+```
+
+In this mode:
+
+1. `prepare-turn` skips live retrieval and always returns the configured memories in the given order
+2. `context_block` starts with `Locked memory context:`
+3. `finalize-turn` still stores the conversation in analytics and the journal, but skips promoting new Markdown memories so the memory base stays fixed
+
+If any configured `memory_id` does not exist, `prepare-turn` fails fast instead of silently falling back to dynamic retrieval.
+
 ## MCP setup
 
 ### Claude Code

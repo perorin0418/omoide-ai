@@ -6,6 +6,10 @@ from pathlib import Path
 from shlex import split as shlex_split
 
 
+def _parse_env_list(value: str) -> tuple[str, ...]:
+    return tuple(item for item in (part.strip() for part in value.replace("\n", ",").split(",")) if item)
+
+
 @dataclass(slots=True)
 class EnginePaths:
     project_root: Path
@@ -43,6 +47,7 @@ class EngineConfig:
     default_top_k: int = 5
     ai_assist_command: tuple[str, ...] = ()
     ai_assist_timeout_seconds: int = 15
+    locked_memory_ids: tuple[str, ...] = ()
 
     @classmethod
     def for_project(cls, project_root: str | Path) -> "EngineConfig":
@@ -50,8 +55,10 @@ class EngineConfig:
         command = os.environ.get("AI_MEMORY_ENGINE_ASSIST_COMMAND", "").strip()
         parsed_command = tuple(shlex_split(command, posix=os.name != "nt")) if command else ()
         timeout = int(os.environ.get("AI_MEMORY_ENGINE_ASSIST_TIMEOUT_SECONDS", "15"))
+        locked_memory_ids = _parse_env_list(os.environ.get("AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS", ""))
         return cls(
             paths=EnginePaths.for_project(root),
             ai_assist_command=parsed_command,
             ai_assist_timeout_seconds=timeout,
+            locked_memory_ids=locked_memory_ids,
         )

@@ -175,11 +175,11 @@ class MemoryEngine:
         cwd: str = "",
         top_k: int | None = None,
     ) -> PreparedTurn:
-        results = self.hybrid_search(user_message, top_k=top_k, session_id=session_id)
+        results, memory_mode = self._prepare_turn_memories(user_message, session_id, top_k=top_k)
         token = uuid.uuid4().hex
         related_entities = self.entity_extractor.extract(user_message)
         open_questions = [result.memory.summary for result in results if result.memory.kind == MemoryKind.OPEN_QUESTION]
-        context_block = self.retriever.build_context_block(results, open_questions)
+        context_block = self.retriever.build_context_block(results, open_questions, memory_mode=memory_mode)
         pending_path = self.paths.pending_turns_root / f"{token}.json"
         pending_path.write_text(
             json.dumps(
@@ -191,6 +191,8 @@ class MemoryEngine:
                     "repo": repo,
                     "branch": branch,
                     "cwd": cwd,
+                    "memory_mode": memory_mode,
+                    "configured_memory_ids": list(self.config.locked_memory_ids),
                     "created_at": now_iso(),
                 },
                 ensure_ascii=False,
@@ -203,6 +205,8 @@ class MemoryEngine:
             user_message=user_message,
             session_id=session_id,
             project_path=project_path,
+            memory_mode=memory_mode,
+            configured_memory_ids=list(self.config.locked_memory_ids),
             retrieved_memories=results,
             related_entities=related_entities,
             open_questions=open_questions,
@@ -254,6 +258,30 @@ class MemoryEngine:
                 },
             )
         )
+        if self.config.locked_memory_ids:
+            self.analytics.log_event(
+                MemoryEvent(
+                    "MemoryPromotionSkipped",
+                    {
+                        "turn_token": turn_token,
+                        "session_id": pending["session_id"],
+                        "memory_mode": "locked",
+                        "configured_memory_ids": list(self.config.locked_memory_ids),
+                    },
+                )
+            )
+            self._delete_pending_turn(turn_token)
+            return {
+                "turn_token": turn_token,
+                "candidate_count": 0,
+                "memory_changes": [],
+                "conflicts": [],
+                "journal_path": str(journal_path),
+                "sync": {"updated": [], "deleted": []},
+                "memory_mode": "locked",
+                "skipped_memory_promotion": True,
+                "configured_memory_ids": list(self.config.locked_memory_ids),
+            }
 
         candidates = self.extractor.extract(pending["user_message"], assistant_message)
         candidates = self.ai_assistant.refine_candidates(
@@ -297,7 +325,46 @@ class MemoryEngine:
             "conflicts": conflicts,
             "journal_path": str(journal_path),
             "sync": sync_result,
+            "memory_mode": pending.get("memory_mode", "dynamic"),
+            "skipped_memory_promotion": False,
+            "configured_memory_ids": list(pending.get("configured_memory_ids", [])),
         }
+
+    def _prepare_turn_memories(
+        self,
+        user_message: str,
+        session_id: str,
+        *,
+        top_k: int | None = None,
+    ) -> tuple[list[SearchResult], str]:
+        if self.config.locked_memory_ids:
+            results = self._locked_memory_results()
+            self.analytics.log_event(
+                MemoryEvent(
+                    "LockedMemoryUsed",
+                    {
+                        "session_id": session_id,
+                        "memory_ids": list(self.config.locked_memory_ids),
+                    },
+                )
+            )
+            return results, "locked"
+        return self.hybrid_search(user_message, top_k=top_k, session_id=session_id), "dynamic"
+
+    def _locked_memory_results(self) -> list[SearchResult]:
+        results: list[SearchResult] = []
+        missing_ids: list[str] = []
+        total = len(self.config.locked_memory_ids)
+        for index, memory_id in enumerate(self.config.locked_memory_ids):
+            record = self.store.get_record(memory_id)
+            if record is None:
+                missing_ids.append(memory_id)
+                continue
+            results.append(SearchResult(record, float(total - index), "locked"))
+        if missing_ids:
+            missing = ", ".join(missing_ids)
+            raise KeyError(f"Unknown locked memory_id(s): {missing}")
+        return results
 
     def _resolve_candidate(
         self,
