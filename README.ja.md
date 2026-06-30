@@ -91,6 +91,7 @@ uvx --from omoide-ai omoide-ai-mcp
 1. GitHub Release を作成するか、`Publish PyPI` workflow を手動実行します
 2. リポジトリ secret に `PYPI_API_TOKEN` を登録します
 3. workflow が `uv build` でビルドし、PyPI にアップロードします
+4. 同じバージョンがすでに公開済みなら既存ファイルをスキップして失敗しません。新しいリリースを出すときは、先に `pyproject.toml` の `version` を更新してください
 
 ## ディレクトリ構成
 
