@@ -24,7 +24,7 @@ class MemoryEngineTests(unittest.TestCase):
 
     def test_prepare_turn_includes_context_block_and_project_path(self) -> None:
         self.assertEqual(self.engine.config.vector_backend, "lancedb")
-        self.assertEqual(self.engine.config.graph_backend, "kuzu")
+        self.assertEqual(self.engine.config.graph_backend, "ladybug")
         self.engine.add_knowledge(
             title="Implementation Runtime",
             summary="The implementation runtime is python.",
@@ -183,6 +183,29 @@ class MemoryEngineTests(unittest.TestCase):
         results_after_delete = self.engine.search("source of truth", session_id="session-3")
         self.assertNotIn("markdown-source-of-truth", [item.memory.memory_id for item in results_after_delete])
         self.assertFalse(Path(result["path"]).exists())
+
+    def test_ladybug_graph_store_bootstraps_when_storage_is_missing(self) -> None:
+        self.engine.add_knowledge(
+            title="Implementation Runtime",
+            summary="The implementation runtime is python.",
+            kind="decision",
+            category="architecture",
+            tags=["python", "runtime"],
+            memory_id="implementation-runtime",
+            subject="implementation_runtime",
+            value="python",
+        )
+        graph_path = self.engine.paths.graph_root / "memory.lbug"
+        legacy_graph_path = self.engine.paths.graph_root / "memory.kuzu"
+        self.assertTrue(graph_path.exists())
+
+        self.engine.close()
+        graph_path.rename(legacy_graph_path)
+        self.engine = MemoryEngine(EngineConfig.for_project(self.project_root))
+
+        self.assertTrue(graph_path.exists())
+        results = self.engine.graph_search("python", session_id="session-migration")
+        self.assertIn("implementation-runtime", [item.memory.memory_id for item in results])
 
     def test_incremental_sync_tracks_chunk_hashes_per_document(self) -> None:
         body = "\n\n".join(

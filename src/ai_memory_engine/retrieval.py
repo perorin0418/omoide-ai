@@ -3,7 +3,7 @@ from __future__ import annotations
 from .analytics import DuckDBAnalyticsStore
 from .context_builder import ContextBuilder
 from .embeddings import HashingEmbeddingProvider
-from .entity_extraction import GraphHit, InMemoryGraphStore, KuzuGraphStore, SimpleEntityExtractor
+from .entity_extraction import GraphHit, InMemoryGraphStore, LadybugGraphStore, SimpleEntityExtractor
 from .markdown_store import MarkdownMemoryStore
 from .models import SearchResult
 from .utils import tokenize
@@ -17,7 +17,7 @@ class HybridRetriever:
         store: MarkdownMemoryStore,
         embedder: HashingEmbeddingProvider,
         vector_store: InMemoryVectorStore | LanceDBVectorStore,
-        graph_store: InMemoryGraphStore | KuzuGraphStore,
+        graph_store: InMemoryGraphStore | LadybugGraphStore,
         entity_extractor: SimpleEntityExtractor,
         analytics: DuckDBAnalyticsStore,
     ) -> None:

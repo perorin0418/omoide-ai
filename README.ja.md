@@ -12,7 +12,7 @@
 - Markdown を唯一の source of truth として扱う
 - ローカル完結、オフライン前提
 - DuckDB に会話・イベント履歴を保存
-- LanceDB / Kuzu を常時利用して派生インデックスを永続化
+- LanceDB / LadybugDB を常時利用して派生インデックスを永続化
 - `Claude Code` / `GitHub Copilot CLI` から同じ MCP server を利用可能
 
 ---
@@ -33,7 +33,7 @@ AI Memory Engine (Python)
    └─ Event emission
         ↓
    ├─ LanceDB
-   ├─ Kuzu
+   ├─ LadybugDB
    └─ DuckDB
 ```
 
@@ -361,9 +361,10 @@ $env:AI_MEMORY_ENGINE_ASSIST_TIMEOUT_SECONDS = "15"
 - `search_logs`
 - `memory_usage_stats`
 
-### LanceDB / Kuzu
+### LanceDB / LadybugDB
 
-検索用のベクトルストアと知識グラフとして、常に永続化されます。
+検索用のベクトルストアと知識グラフとして、常に永続化されます。  
+グラフストアは `.ai-memory-engine/graph/` 配下の `memory.lbug` を利用します。
 
 ---
 
@@ -382,7 +383,7 @@ $env:AI_MEMORY_ENGINE_ASSIST_TIMEOUT_SECONDS = "15"
 ## 注意事項
 
 - durable knowledge は Markdown に必ず反映してください
-- DuckDB / LanceDB / Kuzu だけに知識を残さないでください
+- DuckDB / LanceDB / LadybugDB だけに知識を残さないでください
 - `rebuild` によって Markdown から派生ストアを復元できます
 
 ---

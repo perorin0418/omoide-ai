@@ -27,7 +27,7 @@ AI Memory Engine (Python)
         ↓
 Derived stores
    ├─ LanceDB  : semantic retrieval
-   ├─ Kuzu     : knowledge graph
+   ├─ LadybugDB: knowledge graph
    └─ DuckDB   : conversation/event analytics
 ```
 
@@ -106,7 +106,7 @@ The processing model is:
    - help detect conflicts
 3. **write and sync**
    - update Markdown
-   - update LanceDB, Kuzu, and DuckDB incrementally
+   - update LanceDB, LadybugDB, and DuckDB incrementally
 
 For MVP, extraction should be mostly rule-based with optional AI assist for ambiguous turns.
 
@@ -165,7 +165,7 @@ knowledge/
 - document path
 - chunk id
 
-### Kuzu
+### LadybugDB
 
 **Knowledge graph**
 
@@ -266,7 +266,7 @@ Example body:
 # Implementation Runtime
 
 - Current decision: Python
-- Reason: Local SDK support for LanceDB, Kuzu, and DuckDB is strong
+- Reason: Local SDK support for LanceDB, LadybugDB, and DuckDB is strong
 - Evidence: planning conversation on 2026-06-29
 ```
 
@@ -301,7 +301,7 @@ LanceDB upsert/delete
   ↓
 Entity extraction
   ↓
-Kuzu upsert/delete
+LadybugDB upsert/delete
   ↓
 DuckDB event write
 ```
@@ -317,7 +317,7 @@ Embedding query
   ↓
 LanceDB semantic search
   ↓
-Kuzu graph expansion
+LadybugDB graph expansion
   ↓
 Merge + ranking
   ↓
@@ -354,7 +354,7 @@ Assistant response
 
 ### Phase 2
 
-- Kuzu graph expansion
+- LadybugDB graph expansion
 - better conflict resolution
 - automation wrappers or hooks for more deterministic capture
 - importance scoring improvements
@@ -392,7 +392,7 @@ Assistant response
    - sync events
 7. **Graph layer**
    - entity extraction
-   - Kuzu adapter
+   - LadybugDB adapter
    - graph expansion retrieval
 8. **Hybrid retrieval**
    - merge and ranking
@@ -422,7 +422,7 @@ Assistant response
 - [ ] only changed Markdown files are reprocessed
 - [ ] only changed chunks are re-embedded
 - [ ] LanceDB reflects document additions, updates, and deletions
-- [ ] Kuzu reflects entity and relationship changes
+- [ ] LadybugDB reflects entity and relationship changes
 
 ### Retrieval quality
 

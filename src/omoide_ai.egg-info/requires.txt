@@ -1,4 +1,4 @@
 duckdb>=1.0.0
-kuzu>=0.7.1
+ladybug>=0.0.1
 lancedb>=0.8.2
 PyYAML>=6.0
