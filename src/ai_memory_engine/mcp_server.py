@@ -223,6 +223,8 @@ class MemoryMCPServer:
             self._turn_roots[prepared.turn_token] = project_root
             return {
                 "turn_token": prepared.turn_token,
+                "memory_mode": prepared.memory_mode,
+                "configured_memory_ids": prepared.configured_memory_ids,
                 "retrieved_memories": [
                     {
                         "memory_id": item.memory.memory_id,

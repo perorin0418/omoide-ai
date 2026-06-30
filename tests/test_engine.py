@@ -45,6 +45,7 @@ class MemoryEngineTests(unittest.TestCase):
         self.assertEqual(prepared.project_path, str(self.project_root))
         self.assertIn("Relevant memory context", prepared.context_block)
         self.assertIn("Implementation Runtime", prepared.context_block)
+        self.assertEqual(prepared.memory_mode, "dynamic")
 
     def test_finalize_turn_promotes_markdown_memory(self) -> None:
         prepared = self.engine.memory_prepare_turn(
@@ -72,6 +73,8 @@ class MemoryEngineTests(unittest.TestCase):
         self.assertIn("### User", journal_body)
         self.assertIn("このプロジェクトは Python で実装したい", journal_body)
         self.assertIn("了解です。Python 前提で進めます。", journal_body)
+        self.assertEqual(finalized["memory_mode"], "dynamic")
+        self.assertFalse(finalized["skipped_memory_promotion"])
 
     def test_finalize_turn_appends_tool_results_to_daily_journal(self) -> None:
         prepared = self.engine.memory_prepare_turn(
@@ -254,6 +257,69 @@ class MemoryEngineTests(unittest.TestCase):
             self.assertIn("Refined by local model", record.details)
             self.assertEqual(record.importance_score, 0.99)
             engine.close()
+
+    def test_locked_memory_ids_force_fixed_context_and_skip_promotion(self) -> None:
+        self.engine.add_knowledge(
+            title="Implementation Runtime",
+            summary="The implementation runtime is python.",
+            kind="decision",
+            category="architecture",
+            tags=["python", "runtime"],
+            memory_id="implementation-runtime",
+            subject="implementation_runtime",
+            value="python",
+            importance_score=0.95,
+        )
+        self.engine.add_knowledge(
+            title="Source of Truth",
+            summary="Markdown is the source of truth.",
+            kind="decision",
+            category="architecture",
+            tags=["markdown"],
+            memory_id="markdown-source-of-truth",
+            subject="source_of_truth",
+            value="markdown",
+            importance_score=0.95,
+        )
+        self.engine.config.locked_memory_ids = ("markdown-source-of-truth", "implementation-runtime")
+
+        prepared = self.engine.memory_prepare_turn(
+            user_message="今回は別の話題だけど、固定した記憶だけを使いたい",
+            session_id="session-locked",
+            project_path=str(self.project_root),
+        )
+
+        self.assertEqual(prepared.memory_mode, "locked")
+        self.assertEqual(
+            [item.memory.memory_id for item in prepared.retrieved_memories],
+            ["markdown-source-of-truth", "implementation-runtime"],
+        )
+        self.assertEqual(prepared.configured_memory_ids, ["markdown-source-of-truth", "implementation-runtime"])
+        self.assertIn("Locked memory context", prepared.context_block)
+
+        finalized = self.engine.memory_finalize_turn(
+            turn_token=prepared.turn_token,
+            assistant_message="固定された記憶だけで回答します。",
+        )
+
+        self.assertEqual(finalized["candidate_count"], 0)
+        self.assertEqual(finalized["memory_mode"], "locked")
+        self.assertTrue(finalized["skipped_memory_promotion"])
+        self.assertEqual(
+            finalized["configured_memory_ids"],
+            ["markdown-source-of-truth", "implementation-runtime"],
+        )
+        self.assertIsNone(self.engine.store.get_record("decision-固定された記憶だけで回答します"))
+
+    def test_locked_memory_ids_fail_fast_when_memory_is_missing(self) -> None:
+        self.engine.config.locked_memory_ids = ("missing-memory",)
+
+        with self.assertRaisesRegex(KeyError, "missing-memory"):
+            self.engine.memory_prepare_turn(
+                user_message="固定記憶で回答して",
+                session_id="session-locked-missing",
+                project_path=str(self.project_root),
+            )
 
     def test_finalize_turn_promotes_user_current_razor_from_profile_talk(self) -> None:
         prepared = self.engine.memory_prepare_turn(

@@ -77,6 +77,8 @@ class PreparedTurn:
     user_message: str
     session_id: str
     project_path: str = ""
+    memory_mode: str = "dynamic"
+    configured_memory_ids: list[str] = field(default_factory=list)
     retrieved_memories: list[SearchResult] = field(default_factory=list)
     related_entities: list[str] = field(default_factory=list)
     open_questions: list[str] = field(default_factory=list)

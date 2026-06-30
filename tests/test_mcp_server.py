@@ -12,6 +12,12 @@ from ai_memory_engine.mcp_server import MemoryMCPServer, resolve_project_root
 
 
 class MemoryMCPServerTests(unittest.TestCase):
+    def test_engine_config_reads_locked_memory_ids_from_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            with patch.dict("os.environ", {"AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS": "memory-a, memory-b\nmemory-c"}, clear=True):
+                config = EngineConfig.for_project(tempdir)
+            self.assertEqual(config.locked_memory_ids, ("memory-a", "memory-b", "memory-c"))
+
     def test_tools_list_contains_turn_hooks_and_search_tools(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             server = MemoryMCPServer(MemoryEngine(EngineConfig.for_project(tempdir)))
@@ -59,6 +65,43 @@ class MemoryMCPServerTests(unittest.TestCase):
             payload = json.loads(response["result"]["content"][0]["text"])
             self.assertIn("context_block", payload)
             self.assertIn("Implementation Runtime", payload["context_block"])
+            self.assertEqual(payload["memory_mode"], "dynamic")
+
+    def test_prepare_turn_tool_returns_locked_memory_mode_when_configured(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            engine = MemoryEngine(EngineConfig.for_project(tempdir))
+            engine.add_knowledge(
+                title="Implementation Runtime",
+                summary="The implementation runtime is python.",
+                kind="decision",
+                category="architecture",
+                tags=["python", "runtime"],
+                memory_id="implementation-runtime",
+                subject="implementation_runtime",
+                value="python",
+            )
+            engine.config.locked_memory_ids = ("implementation-runtime",)
+            server = MemoryMCPServer(engine)
+            response = server.handle_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "memory_prepare_turn",
+                        "arguments": {
+                            "user_message": "この質問に固定記憶だけで答えて",
+                            "session_id": "session-locked",
+                            "project_path": tempdir,
+                        },
+                    },
+                }
+            )
+            self.assertIsNotNone(response)
+            payload = json.loads(response["result"]["content"][0]["text"])
+            self.assertEqual(payload["memory_mode"], "locked")
+            self.assertEqual(payload["configured_memory_ids"], ["implementation-runtime"])
+            self.assertEqual(payload["retrieved_memories"][0]["memory_id"], "implementation-runtime")
 
     def test_prepare_and_finalize_use_runtime_cwd_for_storage(self) -> None:
         with tempfile.TemporaryDirectory() as server_root_dir, tempfile.TemporaryDirectory() as runtime_root_dir:

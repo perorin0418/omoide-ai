@@ -4,8 +4,9 @@ from .models import SearchResult
 
 
 class ContextBuilder:
-    def build(self, results: list[SearchResult], open_questions: list[str]) -> str:
-        lines = ["Relevant memory context:"]
+    def build(self, results: list[SearchResult], open_questions: list[str], memory_mode: str = "dynamic") -> str:
+        heading = "Locked memory context:" if memory_mode == "locked" else "Relevant memory context:"
+        lines = [heading]
         if not results:
             lines.append("- No prior memory matched this turn.")
         else:
