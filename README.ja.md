@@ -217,6 +217,14 @@ omoide-ai prepare-turn ^
 
 AI はこの結果を見て応答を組み立てます。
 
+MCP 経由の保存先ルートは次の優先順位で解決されます。
+
+1. `AI_MEMORY_ENGINE_PROJECT_ROOT`
+2. `CLAUDE_PROJECT_DIR`
+3. リクエストで渡した `project_path` または `cwd` から見つかるプロジェクトルート
+4. リクエストで渡した `cwd`
+5. 最後のフォールバックとして MCP サーバープロセス側の実行コンテキスト
+
 ### 2. 応答後
 
 ```bash
