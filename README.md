@@ -75,6 +75,7 @@ For clients that launch a local stdio MCP server, point them at `uvx` instead of
 1. Create a GitHub release or run the `Publish PyPI` workflow manually.
 2. Add a repository secret named `PYPI_API_TOKEN`.
 3. The workflow builds the package with `uv build` and uploads it to PyPI.
+4. If the same version has already been published, the workflow skips the existing files instead of failing. To publish a new release, update `version` in `pyproject.toml` first.
 
 ## Project layout
 
