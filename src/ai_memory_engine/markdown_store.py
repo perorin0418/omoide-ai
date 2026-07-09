@@ -41,7 +41,9 @@ class MarkdownMemoryStore:
         ]
         kind = MemoryKind(metadata.get("kind", MemoryKind.FACT.value))
         return MemoryRecord(
-            memory_id=metadata.get("memory_id", slugify(path.stem)),
+            memory_id=metadata.get(
+                "memory_id", slugify(str(path.relative_to(self.knowledge_root).with_suffix("")))
+            ),
             title=title or path.stem.replace("-", " ").title(),
             kind=kind,
             summary=summary,
