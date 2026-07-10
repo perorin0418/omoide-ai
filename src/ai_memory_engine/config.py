@@ -10,6 +10,10 @@ def _parse_env_list(value: str) -> tuple[str, ...]:
     return tuple(item for item in (part.strip() for part in value.replace("\n", ",").split(",")) if item)
 
 
+def _parse_env_bool(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(slots=True)
 class EnginePaths:
     project_root: Path
@@ -48,6 +52,7 @@ class EngineConfig:
     ai_assist_command: tuple[str, ...] = ()
     ai_assist_timeout_seconds: int = 15
     locked_memory_ids: tuple[str, ...] = ()
+    freeze_promotion: bool = False
 
     @classmethod
     def for_project(cls, project_root: str | Path) -> "EngineConfig":
@@ -56,9 +61,11 @@ class EngineConfig:
         parsed_command = tuple(shlex_split(command, posix=os.name != "nt")) if command else ()
         timeout = int(os.environ.get("AI_MEMORY_ENGINE_ASSIST_TIMEOUT_SECONDS", "15"))
         locked_memory_ids = _parse_env_list(os.environ.get("AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS", ""))
+        freeze_promotion = _parse_env_bool(os.environ.get("AI_MEMORY_ENGINE_FREEZE_PROMOTION", ""))
         return cls(
             paths=EnginePaths.for_project(root),
             ai_assist_command=parsed_command,
             ai_assist_timeout_seconds=timeout,
             locked_memory_ids=locked_memory_ids,
+            freeze_promotion=freeze_promotion,
         )

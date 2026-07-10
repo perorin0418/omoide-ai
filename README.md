@@ -143,6 +143,38 @@ In this mode:
 
 If any configured `memory_id` does not exist, `prepare-turn` fails fast instead of silently falling back to dynamic retrieval.
 
+## Freezing memory promotion
+
+If you just want to stop new memories from being learned from conversations — without pinning retrieval to a specific `memory_id` list — set `AI_MEMORY_ENGINE_FREEZE_PROMOTION` to `1`/`true` before calling `prepare-turn`.
+
+```bash
+AI_MEMORY_ENGINE_FREEZE_PROMOTION=1
+```
+
+Unlike locked memory mode, this does not require enumerating any `memory_id`, so it also works when the knowledge base is too large to list. In this mode:
+
+1. `prepare-turn` keeps doing normal similarity-ranked retrieval (`memory_mode` stays `dynamic`)
+2. `finalize-turn` still stores the conversation in analytics and the journal, but skips promoting new or updated Markdown memories (`skipped_memory_promotion: true`, `promotion_skip_reason: "frozen"`)
+
+Locked memory mode and freeze-promotion mode can be combined, but if `AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS` is set, its stricter fixed-retrieval behavior takes precedence and `promotion_skip_reason` reports `"locked"` instead.
+
+Since the MCP server runs as a local stdio process, set this in the server's `env` block in `.mcp.json` rather than in your shell:
+
+```json
+{
+  "mcpServers": {
+    "omoide-ai": {
+      "type": "local",
+      "command": ".venv\\Scripts\\omoide-ai-mcp.exe",
+      "timeout": 60000,
+      "env": {
+        "AI_MEMORY_ENGINE_FREEZE_PROMOTION": "1"
+      }
+    }
+  }
+}
+```
+
 ## MCP setup
 
 ### Claude Code

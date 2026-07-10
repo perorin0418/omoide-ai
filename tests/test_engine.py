@@ -344,6 +344,40 @@ class MemoryEngineTests(unittest.TestCase):
                 project_path=str(self.project_root),
             )
 
+    def test_freeze_promotion_keeps_dynamic_retrieval_but_skips_new_memory(self) -> None:
+        self.engine.add_knowledge(
+            title="Implementation Runtime",
+            summary="The implementation runtime is python.",
+            kind="decision",
+            category="architecture",
+            tags=["python", "runtime"],
+            memory_id="implementation-runtime",
+            subject="implementation_runtime",
+            value="python",
+            importance_score=0.95,
+        )
+        self.engine.config.freeze_promotion = True
+
+        prepared = self.engine.memory_prepare_turn(
+            user_message="何の言語で進める方針だったっけ？",
+            session_id="session-frozen",
+            project_path=str(self.project_root),
+        )
+
+        self.assertEqual(prepared.memory_mode, "dynamic")
+        self.assertIn("Implementation Runtime", prepared.context_block)
+
+        finalized = self.engine.memory_finalize_turn(
+            turn_token=prepared.turn_token,
+            assistant_message="Python で進めます。",
+        )
+
+        self.assertEqual(finalized["candidate_count"], 0)
+        self.assertEqual(finalized["memory_mode"], "dynamic")
+        self.assertTrue(finalized["skipped_memory_promotion"])
+        self.assertEqual(finalized["promotion_skip_reason"], "frozen")
+        self.assertIsNone(self.engine.store.get_record("decision-python-で進めます"))
+
     def test_finalize_turn_promotes_user_current_razor_from_profile_talk(self) -> None:
         prepared = self.engine.memory_prepare_turn(
             user_message="自分が使ってるのはこのカミソリです\nhttps://schick.jp/collections/hydro-series/products/smr051",

@@ -240,6 +240,21 @@ AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS=implementation-runtime,markdown-source-of-tru
 
 設定した `memory_id` が 1 つでも存在しなければ、動的検索へ黙ってフォールバックせず、その場でエラーにします。
 
+### 記憶の学習だけを一律で止める
+
+`memory_id`を1件ずつ指定せずに、会話からの新規記憶の学習だけを止めたい場合（`knowledge/`が巨大でIDを列挙できない場合など）は、`prepare-turn`の前に`AI_MEMORY_ENGINE_FREEZE_PROMOTION`を`1`にセットします。
+
+```bash
+AI_MEMORY_ENGINE_FREEZE_PROMOTION=1
+```
+
+このモードでは:
+
+1. `prepare-turn`は通常通り類似度順の動的検索を行う（`memory_mode`は`dynamic`のまま）
+2. `finalize-turn`は会話ログとjournalへの保存は続けるが、新規・更新Markdown記憶の昇格だけを止める（`skipped_memory_promotion: true`、`promotion_skip_reason: "frozen"`）
+
+`AI_MEMORY_ENGINE_LOCKED_MEMORY_IDS`と併用も可能ですが、両方設定されている場合は固定検索（locked）が優先され、`promotion_skip_reason`は`"locked"`になります。
+
 ### 2. 応答後
 
 ```bash
