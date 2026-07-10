@@ -258,14 +258,17 @@ class MemoryEngine:
                 },
             )
         )
-        if self.config.locked_memory_ids:
+        if self.config.locked_memory_ids or self.config.freeze_promotion:
+            skip_reason = "locked" if self.config.locked_memory_ids else "frozen"
+            memory_mode = pending.get("memory_mode", "dynamic") if skip_reason == "frozen" else "locked"
             self.analytics.log_event(
                 MemoryEvent(
                     "MemoryPromotionSkipped",
                     {
                         "turn_token": turn_token,
                         "session_id": pending["session_id"],
-                        "memory_mode": "locked",
+                        "memory_mode": memory_mode,
+                        "promotion_skip_reason": skip_reason,
                         "configured_memory_ids": list(self.config.locked_memory_ids),
                     },
                 )
@@ -278,8 +281,9 @@ class MemoryEngine:
                 "conflicts": [],
                 "journal_path": str(journal_path),
                 "sync": {"updated": [], "deleted": []},
-                "memory_mode": "locked",
+                "memory_mode": memory_mode,
                 "skipped_memory_promotion": True,
+                "promotion_skip_reason": skip_reason,
                 "configured_memory_ids": list(self.config.locked_memory_ids),
             }
 
@@ -327,6 +331,7 @@ class MemoryEngine:
             "sync": sync_result,
             "memory_mode": pending.get("memory_mode", "dynamic"),
             "skipped_memory_promotion": False,
+            "promotion_skip_reason": None,
             "configured_memory_ids": list(pending.get("configured_memory_ids", [])),
         }
 
